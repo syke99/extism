@@ -1,5 +1,7 @@
 package extism
 
+import "core:encoding/json"
+
 WasmData :: struct {
     data []u8   `json:"data"`
     hash string `json:"hash,omitempty"`
@@ -40,7 +42,7 @@ Manifest :: struct {
 }
 
 newPluginFromManifest :: proc(ctx: Ctx, manifest: Manifest, wasi: bool) -> (Plugin, Error) {
-    data, err := marshal(manifest)
+    data, err := json.marshal(manifest)
 	if err != .Empty {
 		return Plugin{id: -1}, .MarshalManifest
 	}
@@ -54,7 +56,7 @@ newPluginFromManifest :: proc(ctx: Ctx, manifest: Manifest, wasi: bool) -> (Plug
 }
 
 updateManifest :: proc(plg: Plugin, manifest: Manifest, wasi: bool) Error {
-	data, err := marshal(manifest)
+	data, err := json.marshal(manifest)
 	if err != nil {
 		return .MarshalManifest
 	}

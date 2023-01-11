@@ -3,6 +3,7 @@ package extism
 import "core:bufio.odin"
 import "core:bytes.odin"
 import "core:c"
+import "core:encoding/json"
 import "core:fmt"
 import "core:io.odin"
 import "core:mem"
@@ -44,7 +45,7 @@ updatePlugin :: proc (plg: Plugin, module: io.Reader, wasi: bool) -> (Plugin, er
 }
 
 setPluginConfig :: proc(plg: Plugin, data: map[string][]u8) -> Error {
-    c, err := marshal(data)
+    c, err := json.(data)
 	if err != nil {
 		return Plugin{id: -1}, .MarshalConfig
 	}
