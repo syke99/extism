@@ -15,7 +15,7 @@ foreign Extism {
     extism_error :: proc(ctx ^ExtismContext, c.int32_t) -> c.string
     extism_log_file :: proc(filename, level) -> c.bool
     extism_plugin_config :: proc(ctx: ^ExtismContext, plugin: ExtismPlugin, json: ^c.uint8_t, json_size: ExtismSize) -> c.bool
-    extism_plugin_call :: proc(plg_id: ExtismPlugin, funcName: cstring, input, ^c.uint8_t, data_len: ExtismSize)
+    extism_plugin_call :: proc(plg_id: ExtismPlugin, funcName: cstring, input, ^c.uint8_t, data_len: ExtismSize) -> c.int32_t
     extism_plugin_free :: proc(ctx: ^ExtismContext, index: ExtismPlugin) ---
     extism_plugin_function_exists :: proc(ctx: ^ExtismContext, funcName: cstring) -> c.bool
     extism_plugin_new :: proc(ctx: ^ExtismContext, wasm: ^c.uint8_t, wasmSize: ExtismSize, withWasi: bool) -> ExtismPlugin
