@@ -3,16 +3,9 @@ package extism
 import "core:bufio.odin"
 import "core:bytes.odin"
 import "core:c"
-import "core:encoding/json"
-import "core:fmt"
+import "core:encoding/json.odin"
 import "core:io.odin"
-import "core:mem"
-import "core:os"
-import "core:runtime"
-import "core:strconv"
-import "cort:strings"
-import "core:unicode/utf16"
-import "core:unicode/utf8"
+import "cort:strings.odin"
 
 Plugin :: struct {
     ctx ^Ctx

@@ -1,6 +1,6 @@
 package extism
 
-import "core:encoding/json"
+import "core:encoding/json.odin"
 
 WasmData :: struct {
     data []u8   `json:"data"`
