@@ -11,8 +11,7 @@ import "core:strings"
 */
 
 @(private)
-makePointer :: proc(data: []u8) -> rawptr {
-    ptr: ^u8
+makePointer :: proc(data: []byte) -> rawptr {
     if len(data) > 0 {
         return rawptr(&data[0])
     }
@@ -20,7 +19,7 @@ makePointer :: proc(data: []u8) -> rawptr {
 }
 
 @(private)
-register :: proc(ctx: Ctx, data: []u8, wasi: bool) -> (Plugin, Err) {
+register :: proc(ctx: Ctx, data: []byte, wasi: bool) -> (Plugin, Err) {
     ptr := c.uchar(transmute(int)(uintptr(makePointer(data))))
     plugin := extism_plugin_new(ctx.ptr, &ptr, c.uint64_t(len(data)), c.bool(wasi))
 

@@ -7,6 +7,7 @@ import "core:fmt"
 import json "core:encoding/json"
 import "core:mem"
 import "core:os"
+import "core:slice"
 import "core:strings"
 
 Plugin :: struct {
@@ -15,7 +16,7 @@ Plugin :: struct {
 }
 
 newPlugin :: proc (ctx: Ctx, module: os.Handle, wasi: bool) -> (Plugin, Err) {
-    buf := make([dynamic]u8)
+    buf := make([dynamic]byte)
     defer delete(buf)
 
     er: Err = Err.Empty
@@ -44,7 +45,7 @@ newPlugin :: proc (ctx: Ctx, module: os.Handle, wasi: bool) -> (Plugin, Err) {
 }
 
 updatePlugin :: proc (plg: ^Plugin, module: os.Handle, wasi: bool) -> (Plugin, Err) {
-    buf := make([dynamic]u8)
+    buf := make([dynamic]byte)
     defer delete(buf)
     
     plg := plg
@@ -75,8 +76,7 @@ updatePlugin :: proc (plg: ^Plugin, module: os.Handle, wasi: bool) -> (Plugin, E
     return plg^, er
 }
 
-setPluginConfig :: proc(plg: ^Plugin, data: map[string][]u8) -> Err { 
-
+setPluginConfig :: proc(plg: ^Plugin, data: map[string][]byte) -> Err { 
     er: Err = Err.Empty
 
     dt, err := json.marshal(data)
@@ -108,7 +108,7 @@ pluginProcExists :: proc(plg: Plugin, procName: string) -> bool {
 }
 
 /*TODO: implement body*/
-callPluginProc :: proc(plg: ^Plugin, procName: string, input: []u8) -> ([]u8, Err) {
+callPluginProc :: proc(plg: ^Plugin, procName: string, input: []byte) -> ([]byte, Err) {
     ptr := c.uchar(transmute(int)(uintptr(makePointer(input))))
     name := strings.clone_to_cstring(procName, context.temp_allocator)
 
@@ -130,7 +130,7 @@ callPluginProc :: proc(plg: ^Plugin, procName: string, input: []u8) -> ([]u8, Er
 
         plg = p
 
-        return []u8{}, Err.CallPlugin
+        return []byte{}, Err.CallPlugin
     }
 
     length := extism_plugin_output_length(plg.ctx.ptr, ExtismPlugin(plg.id))
@@ -138,10 +138,10 @@ callPluginProc :: proc(plg: ^Plugin, procName: string, input: []u8) -> ([]u8, Er
     if length > 0 {
         x := extism_plugin_output_data(plg.ctx.ptr, ExtismPlugin(plg.id))
 
-        return mem.any_to_bytes(x), .Empty
+        return slice.bytes_from_ptr(&x, int(length)), .Empty
     }
 
-    return []u8{}, Err.Empty
+    return []byte{}, Err.Empty
 }
 
 freePlugin :: proc(plg: Plugin) {

@@ -3,10 +3,10 @@ package extism
 import "core:c"
 import "core:strings"
 
-when ODIN_OS == .Windows do foreign import Extism "../extism.lib"
-when ODIN_OS == .Linux   do foreign import Extism "../extism.a"
+when ODIN_OS == .Windows do foreign import extism "../extism.lib"
+when ODIN_OS == .Linux  || ODIN_OS == .Darwin  do foreign import extism "../extism.a"
 
-foreign Extism {
+foreign extism {
     extism_context_new :: proc() -> ^ExtismContext ---
     extism_context_free :: proc(ctx: ^ExtismContext) ---
     extism_context_reset :: proc(ctx: ^ExtismContext) ---
