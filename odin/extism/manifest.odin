@@ -42,7 +42,7 @@ Manifest :: struct {
 	timeout:      uint              `json:"timeout_ms,omitempty"`,
 }
 
-newPluginFromManifest :: proc(ctx: Ctx, manifest: Manifest, wasi: bool) -> (Plugin, Err) {
+newPluginFromManifest :: proc(ctx: Ctx, manifest: Manifest, procs: []HostProc, wasi: bool) -> (Plugin, Err) {
     
     p: Plugin = {}
 
@@ -55,7 +55,7 @@ newPluginFromManifest :: proc(ctx: Ctx, manifest: Manifest, wasi: bool) -> (Plug
 		return p, .MarshalManifest
 	}
 
-    plg, e := register(ctx, data, wasi)
+    plg, e := register(ctx, data, procs, wasi)
     if e != .Empty {
 
         p.ctx = nil
@@ -67,13 +67,13 @@ newPluginFromManifest :: proc(ctx: Ctx, manifest: Manifest, wasi: bool) -> (Plug
 	return plg, .Empty
 }
 
-updateManifest :: proc(plg: Plugin, manifest: Manifest, wasi: bool) -> Err {
+updateManifest :: proc(plg: Plugin, manifest: Manifest, procs: []HostProc, wasi: bool) -> Err {
 	data, err := json.marshal(manifest)
 	if err != nil {
 		return .MarshalManifest
 	}
 
-    e := update(plg.ctx.ptr, plg.id, data, wasi)
+    e := update(plg.ctx.ptr, plg.id, data, procs, wasi)
     if e != .Empty {
         plg := plg
         plg.id = c.int32_t(-1)

@@ -2,6 +2,7 @@ package extism
 
 import "core:c"
 import "core:fmt"
+import "core:slice"
 import "core:strings"
 
 /*
@@ -19,9 +20,33 @@ makePointer :: proc(data: []byte) -> rawptr {
 }
 
 @(private)
-register :: proc(ctx: Ctx, data: []byte, wasi: bool) -> (Plugin, Err) {
+makeProcPtrs :: proc(procs: []HostProc) -> [^]ExtismFunction {
+    ptrs: [^]ExtismFunction
+
+    if len(procs) == 0 {
+        return ptrs
+    }
+
+    for hostProc, _ in procs {
+        append(&ptrs, hostProc.pointer)
+    }
+
+    return ptrs
+}
+
+@(private)
+register :: proc(ctx: Ctx, data: []byte, procs: []HostProc, wasi: bool) -> (Plugin, Err) {
     ptr := c.uchar(transmute(int)(uintptr(makePointer(data))))
-    plugin := extism_plugin_new(ctx.ptr, &ptr, c.uint64_t(len(data)), c.bool(wasi))
+
+    proc_ptrs := makeProcPtrs(procs)
+
+    plugin: ExtismPlugin
+
+    if len(procs) == 0 {
+        plugin = extism_plugin_new(ctx.ptr, &ptr, c.uint64_t(len(data)), nil, 0, c.bool(wasi))
+    } else {
+        plugin = extism_plugin_new(ctx.ptr, &ptr, c.uint64_t(len(data)), proc_ptrs, c.uint64_t(len(procs)), c.bool(wasi))
+    }
 
     p: Plugin = {}
 
@@ -50,12 +75,23 @@ register :: proc(ctx: Ctx, data: []byte, wasi: bool) -> (Plugin, Err) {
 }
 
 @(private)
-update :: proc(ctx: ^ExtismContext, plg: i32, data: []u8, wasi: bool) -> Err {
+update :: proc(ctx: ^ExtismContext, plg: i32, data: []u8, procs: []HostProc, wasi: bool) -> Err {
     ptr := c.uchar(transmute(int)(uintptr(makePointer(data))))
-    b := bool(extism_plugin_update(ctx, c.int32_t(plg), &ptr, c.uint64_t(len(data)), c.bool(wasi)))
 
-    if b {
-        return .Empty
+    proc_ptrs := makeProcPtrs(procs)
+
+    if len(procs) == 0 {
+        b := bool(extism_plugin_update(ctx, c.int32_t(plg), &ptr, c.uint64_t(len(data)), proc_ptrs, c.uint64_t(len(procs)), c.bool(wasi)))
+
+        if b {
+            return .Empty
+        }
+    } else {
+        b := bool(extism_plugin_update(ctx, c.int32_t(plg), &ptr, c.uint64_t(len(data)), proc_ptrs, c.uint64_t(len(procs)), c.bool(wasi)))
+
+        if b {
+            return .Empty
+        }
     }
 
     errMsg := extism_error(ctx, c.int32_t(-1))

@@ -15,7 +15,11 @@ Plugin :: struct {
     id: c.int32_t,
 }
 
-newPlugin :: proc (ctx: Ctx, module: os.Handle, wasi: bool) -> (Plugin, Err) {
+CurrentPlugin :: struct {
+    pointer: ^ExtismCurrentPlugin,
+}
+
+newPlugin :: proc (ctx: Ctx, module: os.Handle, procs: []HostProc, wasi: bool) -> (Plugin, Err) {
     buf := make([dynamic]byte)
     defer delete(buf)
 
@@ -31,7 +35,7 @@ newPlugin :: proc (ctx: Ctx, module: os.Handle, wasi: bool) -> (Plugin, Err) {
         return p, er
     }
 
-    plg, e := register(ctx, buf[:], wasi)
+    plg, e := register(ctx, buf[:], procs, wasi)
     if e != .Empty {
         p: Plugin = {}
         p.id = -1
@@ -44,7 +48,7 @@ newPlugin :: proc (ctx: Ctx, module: os.Handle, wasi: bool) -> (Plugin, Err) {
     return plg, er
 }
 
-updatePlugin :: proc (plg: ^Plugin, module: os.Handle, wasi: bool) -> (Plugin, Err) {
+updatePlugin :: proc (plg: ^Plugin, module: os.Handle, procs: []HostProc, wasi: bool) -> (Plugin, Err) {
     buf := make([dynamic]byte)
     defer delete(buf)
     
@@ -62,7 +66,7 @@ updatePlugin :: proc (plg: ^Plugin, module: os.Handle, wasi: bool) -> (Plugin, E
         return plg^, er
     }
 
-    e := update(plg.ctx.ptr, ExtismPlugin(plg.id), buf[:], wasi)
+    e := update(plg.ctx.ptr, ExtismPlugin(plg.id), buf[:], procs, wasi)
     if e != .Empty {
     
         p: Plugin = {}
@@ -103,11 +107,35 @@ setPluginConfig :: proc(plg: ^Plugin, data: map[string][]byte) -> Err {
 
 pluginProcExists :: proc(plg: Plugin, procName: string) -> bool {
     name := strings.clone_to_cstring(procName, context.temp_allocator)
-    b := extism_plugin_function_exists(plg.ctx.ptr, name)
+    b := extism_plugin_function_exists(plg.ctx.ptr, plg.id, name)
     return bool(b)
 }
 
-/*TODO: implement body*/
+newPluginHostProc :: proc(name: cstring, inputs: []ExtismValType, outputs: []ExtismValType, f: ExtismFunctionType, user_data: any) -> HostProc {
+    user_data := user_data
+    dt := &user_data
+    ptr := extism_function_new(name, &inputs[0], c.uint64_t(len(inputs)), &outputs[0], c.uint64_t(len(outputs)), f, rawptr(dt), Free_User_Data(rawptr(dt)))
+
+    pr: HostProc = {}
+
+    pr.user_data = user_data
+    pr.pointer = ptr
+
+    return pr
+}
+
+freePluginHostProc :: proc(pr: HostProc) {
+    extism_function_free(pr.pointer)
+
+    pr := pr
+
+    p := HostProc{}
+
+    p.user_data = pr.user_data
+
+    pr = p
+}
+
 callPluginProc :: proc(plg: ^Plugin, procName: string, input: []byte) -> ([]byte, Err) {
     ptr := c.uchar(transmute(int)(uintptr(makePointer(input))))
     name := strings.clone_to_cstring(procName, context.temp_allocator)
@@ -151,4 +179,11 @@ freePlugin :: proc(plg: Plugin) {
     extism_plugin_free(plg.ctx.ptr, plg.id)
     plg := plg
     plg.id = -1
+}
+
+getCurrentPluginMemory :: proc(cur_plg: CurrentPlugin, offset: uint) -> []byte {
+    length := extism_current_plugin_memory_length(cur_plg.pointer, c.uint64_t(offset))
+    dt := extism_current_plugin_memory(cur_plg.pointer)
+
+    return mem.ptr_to_bytes(&dt, int(offset))
 }
