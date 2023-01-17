@@ -15,7 +15,7 @@ import "core:strings"
 @(private)
 makePointer :: proc(data: []byte) -> rawptr {
     if len(data) > 0 {
-        return rawptr(&data[0])
+        return raw_data(data)
     }
     return nil
 }
@@ -24,19 +24,15 @@ makePointer :: proc(data: []byte) -> rawptr {
 makeProcPtrs :: proc(procs: []HostProc) -> [^]ExtismFunction {
     ptr_slice := make([]ExtismFunction, len(procs))
     
-    ptrs: [^]ExtismFunction
-
     if len(procs) == 0 {
-        return ptrs
+        return nil
     }
 
     for host_proc, i in procs {
         ptr_slice[i] = host_proc.pointer^
     }
 
-    ptrs = slice.as_ptr(ptr_slice)
-
-    return ptrs
+    return slice.as_ptr(ptr_slice)
 }
 
 @(private)
