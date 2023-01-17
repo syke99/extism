@@ -1,6 +1,8 @@
 package extism
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,11 +50,30 @@ func (f *Function) Free() {
 	f.pointer = nil
 }
 
+// encodes userData and returns an unsafe.Pointer pointing to the first byte in
+// the slice of encoded userData bytes, or returns an error
+func userDataPointer(userData interface{}) (unsafe.Pointer, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+
+	if err := enc.Encode(userData); err != nil {
+		return nil, errors.New("error encoding data")
+	}
+
+	return unsafe.Pointer(&buf.Bytes()[0]), nil
+}
+
 // NewFunction creates a new host function with the given name, input/outputs and optional user data, which can be an
 // arbitrary `interface{}`
-func NewFunction(name string, inputs []ValType, outputs []ValType, f unsafe.Pointer, userData interface{}) Function {
+func NewFunction(name string, inputs []ValType, outputs []ValType, f unsafe.Pointer, userData interface{}) (Function, error) {
 	var function Function
 	function.userData = userData
+
+	data, err := userDataPointer(userData)
+	if err != nil {
+		return Function{}, err
+	}
+
 	cname := C.CString(name)
 	function.pointer = C.extism_function_new(
 		cname,
@@ -61,11 +82,12 @@ func NewFunction(name string, inputs []ValType, outputs []ValType, f unsafe.Poin
 		(*C.ExtismValType)(&outputs[0]),
 		C.uint64_t(len(outputs)),
 		(*[0]byte)(f),
-		unsafe.Pointer(&function.userData),
+		C.set_data(data),
 		nil,
 	)
+	C.free(data)
 	C.free(unsafe.Pointer(cname))
-	return function
+	return function, nil
 }
 
 type CurrentPlugin struct {
@@ -215,7 +237,7 @@ func update(ctx *Context, plugin int32, data []byte, functions []Function, wasi 
 			C.int32_t(plugin),
 			(*C.uchar)(ptr),
 			C.uint64_t(len(data)),
-			nil, 
+			nil,
 			0,
 			C._Bool(wasi),
 		))

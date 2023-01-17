@@ -5,7 +5,7 @@ else
 	OSFLAG = Nix-Type
 endif
 
-print:
+prepare:
 ifeq ($(OSFLAG),Windows)
 	$(MAKE) prepare-cl
 else
