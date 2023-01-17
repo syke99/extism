@@ -2,6 +2,7 @@ package extism
 
 import "core:c"
 import "core:fmt"
+import "core:runtime"
 import "core:slice"
 import "core:strings"
 
@@ -21,15 +22,19 @@ makePointer :: proc(data: []byte) -> rawptr {
 
 @(private)
 makeProcPtrs :: proc(procs: []HostProc) -> [^]ExtismFunction {
+    ptr_slice := make([]ExtismFunction, len(procs))
+    
     ptrs: [^]ExtismFunction
 
     if len(procs) == 0 {
         return ptrs
     }
 
-    for hostProc, _ in procs {
-        append(&ptrs, hostProc.pointer)
+    for host_proc, i in procs {
+        ptr_slice[i] = host_proc.pointer^
     }
+
+    ptrs = slice.as_ptr(ptr_slice)
 
     return ptrs
 }
