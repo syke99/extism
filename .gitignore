@@ -16,7 +16,7 @@ c/main
 cpp/test/test
 cpp/example
 go/main
-odin/extism/ols.json
+ols.json
 ruby/.bundle/
 ruby/.yardoc
 ruby/_yardoc/
